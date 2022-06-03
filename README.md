@@ -1,1 +1,3 @@
-pg_fsm
+Finite state machine extension for Postgresql
+
+# Installation
