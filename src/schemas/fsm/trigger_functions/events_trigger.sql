@@ -7,6 +7,11 @@ BEGIN
     RAISE 'pg_fsm: Cannot update or delete events. Events are append-only';
   END IF;
 
+  -- Only one new event at a time
+  IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events AND (array_length(NEW.fsm_events, 1) - array_length(OLD.fsm_events, 1)) > 1 THEN
+    RAISE 'pg_fsm: Only one event can be appended for each update';
+  END IF;
+
   IF NEW.fsm_current_state IS DISTINCT FROM OLD.fsm_current_state THEN
     RAISE 'pg_fsm: Cannot force-update current_state. Column is read-only';
   END IF;
