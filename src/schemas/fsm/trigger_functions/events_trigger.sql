@@ -2,21 +2,34 @@ CREATE FUNCTION fsm.events_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  -- fsm_events is append-only
-  IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events AND trim_array(NEW.fsm_events, 1) IS DISTINCT FROM OLD.fsm_events THEN
-    RAISE 'pg_fsm: Cannot update or delete events. Events are append-only';
-  END IF;
 
-  -- Only one new event at a time
-  IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events AND (array_length(NEW.fsm_events, 1) - array_length(OLD.fsm_events, 1)) > 1 THEN
-    RAISE 'pg_fsm: Only one event can be appended for each update';
-  END IF;
+  IF TG_OP = 'INSERT' THEN
+    -- fsm_events must be empty, and fsm_current_state must be 'start' during INSERT
+    IF array_length(NEW.fsm_events,1) IS NOT NULL THEN
+      RAISE 'pg_fsm: Cannot insert row with non-empty event array';
+    END IF;
 
-  IF NEW.fsm_current_state IS DISTINCT FROM OLD.fsm_current_state THEN
-    RAISE 'pg_fsm: Cannot force-update current_state. Column is read-only';
-  END IF;
+    IF NEW.fsm_current_state IS DISTINCT FROM 'start' THEN
+      RAISE 'pg_fsm: Cannot insert row with non-default current state';
+    END IF;
+  ELSE
+    -- fsm_events is append-only
+    IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events AND trim_array(NEW.fsm_events, 1) IS DISTINCT FROM OLD.fsm_events THEN
+      RAISE 'pg_fsm: Cannot update or delete events. Events are append-only';
+    END IF;
 
-  NEW.fsm_current_state = fsm.run_machine(TG_RELID::regclass, NEW.fsm_events);
+    -- Only one new event at a time
+    IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events AND (array_length(NEW.fsm_events, 1) - array_length(OLD.fsm_events, 1)) > 1 THEN
+      RAISE 'pg_fsm: Only one event can be appended for each update';
+    END IF;
+
+    -- fsm_current_state is read only
+    IF NEW.fsm_current_state IS DISTINCT FROM OLD.fsm_current_state THEN
+      RAISE 'pg_fsm: Cannot force-update current_state. Column is read-only';
+    END IF;
+
+    NEW.fsm_current_state = fsm.run_machine(TG_RELID::regclass, NEW.fsm_events);
+  END IF;
   RETURN NEW;
   -- TODO: Check that new event timestamp is not too far from CURRENT_TIMESTAMP, and absolutely not in the future
 
