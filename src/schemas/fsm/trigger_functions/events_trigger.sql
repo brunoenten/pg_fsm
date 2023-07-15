@@ -4,15 +4,15 @@ CREATE FUNCTION fsm.events_trigger() RETURNS trigger
 BEGIN
 
   IF TG_OP = 'INSERT' THEN
-    -- fsm_events must be empty, and fsm_current_state must be 'start' during INSERT
+    -- fsm_events must be empty, and fsm_current_state / fsm_previous_state must be 'start' during INSERT
     IF array_length(NEW.fsm_events,1) IS NOT NULL THEN
       RAISE 'pg_fsm: Cannot insert row with non-empty event array';
     END IF;
 
-    IF NEW.fsm_current_state IS DISTINCT FROM 'start' THEN
-      RAISE 'pg_fsm: Cannot insert row with non-default current state';
+    IF NEW.fsm_current_state IS DISTINCT FROM 'start'  OR NEW.fsm_previous_state IS DISTINCT FROM 'start' THEN
+      RAISE 'pg_fsm: Cannot insert row with non-default states';
     END IF;
-  ELSE
+  ELSE -- UPDATE
     -- fsm_events is append-only
     IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events AND trim_array(NEW.fsm_events, 1) IS DISTINCT FROM OLD.fsm_events THEN
       RAISE 'pg_fsm: Cannot update or delete events. Events are append-only';
@@ -23,16 +23,15 @@ BEGIN
       RAISE 'pg_fsm: Only one event can be appended for each update';
     END IF;
 
-    -- fsm_current_state is read only
-    IF NEW.fsm_current_state IS DISTINCT FROM OLD.fsm_current_state THEN
-      RAISE 'pg_fsm: Cannot force-update current_state. Column is read-only';
+    -- fsm_current_state and fsm_previous_state are read only
+    IF NEW.fsm_current_state IS DISTINCT FROM OLD.fsm_current_state OR NEW.fsm_previous_state IS DISTINCT FROM OLD.fsm_previous_state THEN
+      RAISE 'pg_fsm: Cannot force-update states. Columns fsm_current_state and fsm_previous_state are read-only';
     END IF;
 
+    NEW.fsm_previous_state = NEW.fsm_current_state;
     NEW.fsm_current_state = fsm.run_machine(TG_RELID::regclass, NEW.fsm_events);
   END IF;
   RETURN NEW;
-  -- TODO: Check that new event timestamp is not too far from CURRENT_TIMESTAMP, and absolutely not in the future
-
 END
 $$;
 

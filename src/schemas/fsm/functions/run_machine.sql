@@ -9,7 +9,7 @@ DECLARE
 BEGIN
     current_state = 'start';
     FOREACH _event IN ARRAY _events LOOP
-        next_state = fsm.transition(_table, current_state, _event.name);
+        next_state = fsm.execute_transition(_table, current_state, _event.name);
         IF next_state IS NULL THEN
             RAISE 'Invalid event % for state % for table %', _event.name, current_state, _table;
         END IF;

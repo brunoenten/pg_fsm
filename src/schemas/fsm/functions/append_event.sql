@@ -1,4 +1,3 @@
--- depends_on: ["::schemas:fsm:types:event"]
 CREATE OR REPLACE FUNCTION fsm.append_event(target_table regclass, target_pk jsonb, new_event_name text) RETURNS void
     LANGUAGE plpgsql
     AS
