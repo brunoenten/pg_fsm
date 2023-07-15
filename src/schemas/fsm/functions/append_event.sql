@@ -22,4 +22,4 @@ CREATE OR REPLACE FUNCTION fsm.append_event(target_table regclass, target_pk jso
     END
     $$;
 
-COMMENT ON FUNCTION fsm.append_event(existing_events fsm.event[], new_event_name text) IS 'Append an event to a table machine. Use with UPDATE ... SET fsm_events=fsm.append_event(event_name);';
+COMMENT ON FUNCTION fsm.append_event(target_table regclass, target_pk jsonb, new_event_name text) IS 'Append an event to a table row machine.';
