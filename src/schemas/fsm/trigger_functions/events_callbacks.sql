@@ -1,5 +1,5 @@
 -- depends_on: ["::schemas:fsm:types:event"]
-CREATE OR REPLACE FUNCTION fsm.events_callbacks() RETURNS trigger
+CREATE FUNCTION fsm.events_callbacks() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 DECLARE
