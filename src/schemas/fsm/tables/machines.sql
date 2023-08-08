@@ -1,3 +1,4 @@
+-- depends_on: ["::schemas:fsm:trigger_functions:validate_transitions"]
 CREATE TABLE fsm.machines
 (
     "table" regclass NOT NULL,
