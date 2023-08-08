@@ -6,7 +6,7 @@ CREATE TABLE fsm.machines
     state_to text COLLATE pg_catalog."default" NOT NULL,
     callbacks regproc[],
     CONSTRAINT machines_unique_transition UNIQUE ("table", state_from, event, state_to)
-)
+);
 
 COMMENT ON TABLE fsm.machines
     IS 'Possible transitions for tables finite state machines';
