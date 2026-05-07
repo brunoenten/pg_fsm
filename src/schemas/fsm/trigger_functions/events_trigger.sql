@@ -12,7 +12,18 @@ BEGIN
     IF NEW.fsm_current_state IS DISTINCT FROM 'start'  OR NEW.fsm_previous_state IS DISTINCT FROM 'start' THEN
       RAISE 'pg_fsm: Cannot insert row with non-default states';
     END IF;
+    IF NEW.new_event IS NOT NULL THEN
+      RAISE 'pg_fsm: Cannot insert row with new_event set';
+    END IF;
   ELSE -- UPDATE
+    IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events THEN
+      RAISE 'pg_fsm: Cannot directly update fsm_events. Use column new_event';
+    END IF
+    -- new_event is a write-only helper; append it to fsm_events when provided.
+    IF NEW.new_event IS NOT NULL THEN
+      NEW.fsm_events = NEW.fsm_events || (NEW.new_event, CURRENT_TIMESTAMP(0))::fsm.event;    
+    END IF;
+
     -- fsm_events is append-only
     IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events AND trim_array(NEW.fsm_events, 1) IS DISTINCT FROM OLD.fsm_events THEN
       RAISE 'pg_fsm: Cannot update or delete events. Events are append-only';
@@ -30,6 +41,7 @@ BEGIN
 
     NEW.fsm_previous_state = NEW.fsm_current_state;
     NEW.fsm_current_state = fsm.run_machine(TG_RELID::regclass, NEW.fsm_events);
+    NEW.new_event = NULL;
   END IF;
   RETURN NEW;
 END

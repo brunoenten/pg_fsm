@@ -7,6 +7,7 @@ BEGIN
     EXECUTE format('ALTER TABLE %s DROP COLUMN fsm_events', _table);
     EXECUTE format('ALTER TABLE %s DROP COLUMN fsm_current_state', _table);
     EXECUTE format('ALTER TABLE %s DROP COLUMN fsm_previous_state', _table);
+    EXECUTE format('ALTER TABLE %s DROP COLUMN new_event', _table);
     DELETE FROM fsm.machines WHERE "table"=_table;
 END;
 $$;
