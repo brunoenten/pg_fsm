@@ -49,7 +49,7 @@ CREATE FUNCTION fsm.remove_callback(_table regclass, _state_from text, _event te
 
 $$;
 
-COMMENT ON FUNCTION fsm.add_callback(_table regclass, _state_from text, _event text, _state_to text, callback_function regproc) IS 'Remove a callback function from a transition';
+COMMENT ON FUNCTION fsm.remove_callback(_table regclass, _state_from text, _event text, _state_to text, callback_function regproc) IS 'Remove a callback function from a transition';
 CREATE FUNCTION fsm.add_callback(_table regclass, _state_from text, _event text, _state_to text, callback_function regproc) RETURNS boolean
     LANGUAGE sql
     AS $$
