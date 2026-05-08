@@ -1,3 +1,4 @@
+-- depends_on: ["::schemas:fsm:tables:machines"]
 CREATE FUNCTION fsm.remove_callback(_table regclass, _state_from text, _event text, _state_to text, callback_function regproc) RETURNS boolean
     LANGUAGE sql
     AS $$

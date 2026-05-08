@@ -1,3 +1,4 @@
+-- depends_on: ["::schemas:fsm:tables:machines"]
 CREATE FUNCTION fsm.add_transition(_table regclass, _state_from text, _event text, _state_to text) RETURNS void
     LANGUAGE sql
     AS $$

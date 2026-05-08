@@ -1,4 +1,4 @@
--- depends_on: ["::schemas:fsm:types:event"]
+-- depends_on: ["::schemas:fsm:types:event", "::schemas:fsm:tables:machines"]
 CREATE FUNCTION fsm.run_machine(_table regclass, _events fsm.event[]) RETURNS text
     LANGUAGE plpgsql
     AS $$

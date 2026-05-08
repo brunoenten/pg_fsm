@@ -8,10 +8,10 @@ DECLARE
 BEGIN
     IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events THEN
         -- Get new event
-        new_event = NEW.fsm_events[array_upper(NEW.fsm_events, 1)].name;
+        _new_event = NEW.fsm_events[array_upper(NEW.fsm_events, 1)].name;
 
         -- Execute callbacks from transition
-        FOR callback IN SELECT unnest(callbacks) FROM fsm.machines WHERE "table"=TG_RELID AND state_from=NEW.fsm_previous_state AND "event"=new_event AND state_to=NEW.fsm_current_state LOOP
+        FOR callback IN SELECT unnest(callbacks) FROM fsm.machines WHERE "table"=TG_RELID AND state_from=NEW.fsm_previous_state AND "event"=_new_event AND state_to=NEW.fsm_current_state LOOP
             EXECUTE format('SELECT %s($1)', callback) USING NEW;
         END LOOP;
     END IF;

@@ -1,3 +1,4 @@
+-- depends_on: ["::schemas:fsm:tables:machines"]
 CREATE FUNCTION fsm.add_to_table(_table regclass) RETURNS void
     LANGUAGE plpgsql
     AS $$
