@@ -1,7 +1,7 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use "CREATE EXTENSION fsm" to load this file. \quit
 --
-CREATE SCHEMA IF NOT EXISTS fsm;
+-- CREATE SCHEMA IF NOT EXISTS fsm;
 CREATE TYPE fsm.event AS (
 	name text,
 	occured_at timestamp without time zone
