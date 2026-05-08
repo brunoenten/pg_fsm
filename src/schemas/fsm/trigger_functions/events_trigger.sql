@@ -18,7 +18,7 @@ BEGIN
   ELSE -- UPDATE
     IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events THEN
       RAISE 'pg_fsm: Cannot directly update fsm_events. Use column new_event';
-    END IF
+    END IF;
     -- new_event is a write-only helper; append it to fsm_events when provided.
     IF NEW.new_event IS NOT NULL THEN
       NEW.fsm_events = NEW.fsm_events || (NEW.new_event, CURRENT_TIMESTAMP(0))::fsm.event;    
