@@ -1,6 +1,9 @@
+-- depends_on: ["::schemas:fsm:functions:row_primary_key_jsonb", "::schemas:fsm:functions:run_machine"]
 CREATE FUNCTION fsm.events_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    notify_payload text;
 BEGIN
 
   IF TG_OP = 'INSERT' THEN
@@ -21,7 +24,7 @@ BEGIN
     END IF;
     -- new_event is a write-only helper; append it to fsm_events when provided.
     IF NEW.new_event IS NOT NULL THEN
-      NEW.fsm_events = NEW.fsm_events || (NEW.new_event, CURRENT_TIMESTAMP(0))::fsm.event;    
+      NEW.fsm_events = NEW.fsm_events || (NEW.new_event, CURRENT_TIMESTAMP(0))::fsm.event;
     END IF;
 
     -- fsm_events is append-only
@@ -42,6 +45,16 @@ BEGIN
     NEW.fsm_previous_state = NEW.fsm_current_state;
     NEW.fsm_current_state = fsm.run_machine(TG_RELID::regclass, NEW.fsm_events);
     NEW.new_event = NULL;
+
+    IF NEW.fsm_events IS DISTINCT FROM OLD.fsm_events THEN
+      notify_payload := jsonb_build_object(
+        'pk', fsm.row_primary_key_jsonb(TG_RELID::regclass, NEW),
+        'old_state', OLD.fsm_current_state,
+        'event', NEW.fsm_events[array_upper(NEW.fsm_events, 1)].name,
+        'new_state', NEW.fsm_current_state
+      )::text;
+      PERFORM pg_notify('fsm_' || TG_TABLE_NAME, notify_payload);
+    END IF;
   END IF;
   RETURN NEW;
 END

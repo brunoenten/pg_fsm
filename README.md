@@ -134,6 +134,25 @@ Unique constraint: `(table, state_from, event, state_to)`.
 - **after trigger** (`..._fsm_events_callbacks`) calls `fsm.events_callbacks()`
   - executes transition callbacks
 
+### `LISTEN` / `NOTIFY` on new events
+
+After each update that appends exactly one event and recomputes state, the `BEFORE` trigger calls `pg_notify` on channel `fsm_<table_name>`, where `<table_name>` is the **unqualified** relation name (`TG_TABLE_NAME`, for example `orders` for `public.orders`).
+
+The payload is a JSON object (text) with:
+
+- `pk`: primary key column names mapped to values (empty object `{}` if the table has no primary key).
+- `old_state`: FSM state before this event (`OLD.fsm_current_state`).
+- `event`: name of the appended event.
+- `new_state`: FSM state after running the machine (`NEW.fsm_current_state`).
+
+Example:
+
+```sql
+LISTEN fsm_orders;
+-- in another session, after a successful transition on public.orders:
+-- NOTIFY payload similar to: {"pk":{"id":1},"old_state":"start","event":"create","new_state":"pending"}
+```
+
 ## Public API Reference
 
 ### Table lifecycle
@@ -170,6 +189,11 @@ Callback functions should therefore accept a single argument of the target row t
 - `fsm.run_machine(_table regclass, _events fsm.event[]) RETURNS text`
   - Replays all events from `start`, returns resulting state.
   - Raises on invalid transitions.
+
+### Helpers
+
+- `fsm.row_primary_key_jsonb(_table regclass, _row record) RETURNS jsonb`
+  - Used by the FSM trigger to build the `pk` object in `NOTIFY` payloads.
 
 ## Validation Rules and Constraints
 

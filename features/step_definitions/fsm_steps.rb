@@ -9,6 +9,16 @@ Given('an fsm-enabled orders table') do
   @pg.exec("SELECT fsm.add_to_table('public.orders'::regclass)")
   @pg.exec("SELECT fsm.add_transition('public.orders'::regclass, 'start', 'create', 'pending')")
   @pg.exec("SELECT fsm.add_transition('public.orders'::regclass, 'pending', 'pay', 'paid')")
+  @fsm_notify_channel = @pg.exec(
+    "SELECT 'fsm_' || c.relname FROM pg_catalog.pg_class c WHERE c.oid = 'public.orders'::regclass"
+  ).getvalue(0, 0)
+end
+
+Given('I listen on the fsm notify channel for public.orders') do
+  channel = @fsm_notify_channel || @pg.exec(
+    "SELECT 'fsm_' || c.relname FROM pg_catalog.pg_class c WHERE c.oid = 'public.orders'::regclass"
+  ).getvalue(0, 0)
+  @pg.exec("LISTEN #{@pg.quote_ident(channel)}")
 end
 
 Given('an order with id {int} exists') do |order_id|
@@ -64,4 +74,54 @@ end
 Then('the last database error should contain {string}') do |message_fragment|
   expect(@last_error).not_to be_nil
   expect(@last_error.message).to include(message_fragment)
+end
+
+Then('I should receive a notify on channel {string}') do |expected_channel|
+  deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+  channel = nil
+  payload = nil
+
+  while Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
+    @pg.consume_input
+    msg = @pg.notifies
+    if msg
+      channel, payload =
+        case msg
+        when Array
+          [msg[0], msg[2]]
+        when Hash
+          ch = msg[:relname] || msg['relname'] || msg[:channel] || msg['channel']
+          pl = msg[:extra] || msg['extra'] || msg[:payload] || msg['payload']
+          [ch, pl]
+        else
+          ch = msg.respond_to?(:relname) ? msg.relname : msg.channel
+          pl = msg.respond_to?(:extra) ? msg.extra : msg.payload
+          [ch, pl]
+        end
+      break
+    end
+    sleep 0.02
+  end
+
+  expect(channel).not_to be_nil
+  expect(payload).not_to be_nil
+  @last_notify_channel = channel
+  @last_notify_payload = payload
+  expect(channel).to eq(expected_channel)
+  @last_notify_json = JSON.parse(payload)
+end
+
+Then('the notify payload should have:') do |table|
+  expect(@last_notify_json).not_to be_nil
+  table.raw.each do |key, value|
+    key = key.strip
+    value = value.strip
+    case key
+    when /^pk\.(.+)$/
+      pk_key = Regexp.last_match(1)
+      expect(@last_notify_json['pk'][pk_key].to_s).to eq(value)
+    else
+      expect(@last_notify_json[key].to_s).to eq(value)
+    end
+  end
 end
