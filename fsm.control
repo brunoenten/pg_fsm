@@ -1,5 +1,5 @@
 default_version = '0.3'
-module_pathname = '$libdir/oxr'
+module_pathname = '$libdir/fsm'
 relocatable = false
 schema = 'fsm'
 comment = 'Finite state machine extension'
